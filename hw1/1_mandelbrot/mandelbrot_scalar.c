@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "my_rand.h"
+
 #define LOWER_COORD ((double)-1.5)
 #define UPPER_COORD ((double)1.5)
 #define MAX_N 10000
@@ -12,7 +14,7 @@ unsigned long nThreads, nPoints;
 double complex* mandelbrotSet;
 
 bool isMandelbrotPoint(const double complex* point);
-double complex genRandCmplx(double lower, double upper);
+double complex genRandCmplx(unsigned* pSeed, double lower, double upper);
 int saveMandelbrotSetToCSV(const char* filename);
 
 int main(int argc, const char* argv[])
@@ -29,9 +31,10 @@ int main(int argc, const char* argv[])
     mandelbrotSet = malloc(nPoints * sizeof(double complex));
 
     size_t foundMandelbrotPoint = 0;
+    unsigned seed = 1;
     while (foundMandelbrotPoint < nPoints)
     {
-        double complex c = genRandCmplx(LOWER_COORD, UPPER_COORD);
+        double complex c = genRandCmplx(&seed, LOWER_COORD, UPPER_COORD);
         if (isMandelbrotPoint(&c))
         {
             mandelbrotSet[foundMandelbrotPoint++] = c;
@@ -58,10 +61,10 @@ bool isMandelbrotPoint(const double complex* point)
     return true;
 }
 
-double complex genRandCmplx(double lower, double upper)
+double complex genRandCmplx(unsigned* pSeed, double lower, double upper)
 {
-    double re = lower + (upper - lower) * rand() / RAND_MAX;
-    double im = lower + (upper - lower) * rand() / RAND_MAX;
+    double re = lower + (upper - lower) * my_drand(pSeed);
+    double im = lower + (upper - lower) * my_drand(pSeed);
     double complex randCmplx = CMPLX(re, im);
     return randCmplx;
 }

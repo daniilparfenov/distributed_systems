@@ -4,28 +4,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "my_rand.h"
+
 #define LOWER_COORD ((double)-1.5)
 #define UPPER_COORD ((double)1.5)
 #define MAX_N 10000
 
 pthread_mutex_t mutex;
 
-unsigned long nThreads, nPoints;
+size_t nThreads, nPoints;
 size_t foundMandelbrotPoint = 0;
 double complex* mandelbrotSet;
 
 bool isMandelbrotPoint(const double complex point);
-double complex genRandCmplx(double lower, double upper);
+double complex genRandCmplx(unsigned* pSeed, double lower, double upper);
 int saveMandelbrotSetToCSV(const char* filename);
 
-void* routine(void* pPointsToFindCnt)
+void* routine(void* pRank)
 {
-    unsigned long pointToFindCnt = (unsigned long)pPointsToFindCnt;
-    unsigned long foundPoints = 0;
+    size_t myRank = (size_t)pRank;
+    size_t pointToFindCnt = nPoints / nThreads;
+    if (myRank == nThreads - 1)
+        pointToFindCnt = nPoints / nThreads + nPoints % nThreads;
+    size_t foundPoints = 0;
+    unsigned seed = (unsigned)myRank + 1;  // +1 to protect from zero seed
 
     while (foundPoints < pointToFindCnt)
     {
-        double complex c = genRandCmplx(LOWER_COORD, UPPER_COORD);
+        double complex c = genRandCmplx(&seed, LOWER_COORD, UPPER_COORD);
         if (isMandelbrotPoint(c))
         {
             pthread_mutex_lock(&mutex);
@@ -52,11 +58,10 @@ int main(int argc, const char* argv[])
 
     pthread_mutex_init(&mutex, NULL);
 
-    for (size_t i = 0; i < nThreads - 1; i++)
+    for (size_t i = 0; i < nThreads; i++)
     {
-        pthread_create(&threadHandles[i], NULL, routine, (void*)(nPoints / nThreads));
+        pthread_create(&threadHandles[i], NULL, routine, (void*)i);
     }
-    pthread_create(&threadHandles[nThreads - 1], NULL, routine, (void*)(nPoints / nThreads + nPoints % nThreads));
 
     for (size_t i = 0; i < nThreads; i++)
     {
@@ -86,10 +91,10 @@ bool isMandelbrotPoint(const double complex point)
     return true;
 }
 
-double complex genRandCmplx(double lower, double upper)
+double complex genRandCmplx(unsigned* pSeed, double lower, double upper)
 {
-    double re = lower + (upper - lower) * rand() / RAND_MAX;
-    double im = lower + (upper - lower) * rand() / RAND_MAX;
+    double re = lower + (upper - lower) * my_drand(pSeed);
+    double im = lower + (upper - lower) * my_drand(pSeed);
     double complex randCmplx = CMPLX(re, im);
     return randCmplx;
 }
