@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "my_rand.h"
+#include "timer.h"
 
 #define LOWER_COORD ((double)-1.5)
 #define UPPER_COORD ((double)1.5)
@@ -53,7 +54,14 @@ int main(int argc, const char* argv[])
 
     pthread_t* threadHandles = malloc(nThreads * sizeof(pthread_t));
     mandelbrotSet = malloc(nPoints * sizeof(double complex));
+    if (!threadHandles || !mandelbrotSet)
+    {
+        perror("Malloc failed");
+        return EXIT_FAILURE;
+    }
 
+    double startTime, endTime;
+    GET_TIME(startTime);
     for (size_t i = 0; i < nThreads; i++)
     {
         pthread_create(&threadHandles[i], NULL, routine, (void*)i);
@@ -63,6 +71,11 @@ int main(int argc, const char* argv[])
     {
         pthread_join(threadHandles[i], NULL);
     }
+    GET_TIME(endTime);
+
+    printf("nThreads: %zu\n", nThreads);
+    printf(" nPoints: %zu\n", nPoints);
+    printf("    Time: %lf\n", endTime - startTime);
 
     saveMandelbrotSetToCSV("mandelbrot.csv");
 
