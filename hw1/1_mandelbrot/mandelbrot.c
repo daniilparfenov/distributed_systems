@@ -10,10 +10,7 @@
 #define UPPER_COORD ((double)1.5)
 #define MAX_N 10000
 
-pthread_mutex_t mutex;
-
 size_t nThreads, nPoints;
-size_t foundMandelbrotPoint = 0;
 double complex* mandelbrotSet;
 
 bool isMandelbrotPoint(const double complex point);
@@ -22,21 +19,20 @@ int saveMandelbrotSetToCSV(const char* filename);
 
 void* routine(void* pRank)
 {
-    size_t myRank = (size_t)pRank;
-    size_t pointToFindCnt = nPoints / nThreads;
-    if (myRank == nThreads - 1)
-        pointToFindCnt = nPoints / nThreads + nPoints % nThreads;
-    size_t foundPoints = 0;
-    unsigned seed = (unsigned)myRank + 1;  // +1 to protect from zero seed
+    size_t rank = (size_t)pRank;
 
+    size_t baseCount = nPoints / nThreads;
+    size_t pointToFindCnt = (rank != nThreads - 1) ? baseCount : baseCount + nPoints % nThreads;
+    size_t offset = rank * baseCount;
+    unsigned seed = (unsigned)rank + 1;  // +1 to protect from zero seed
+
+    size_t foundPoints = 0;
     while (foundPoints < pointToFindCnt)
     {
         double complex c = genRandCmplx(&seed, LOWER_COORD, UPPER_COORD);
         if (isMandelbrotPoint(c))
         {
-            pthread_mutex_lock(&mutex);
-            mandelbrotSet[foundMandelbrotPoint++] = c;
-            pthread_mutex_unlock(&mutex);
+            mandelbrotSet[offset + foundPoints] = c;
             foundPoints++;
         }
     }
@@ -56,8 +52,6 @@ int main(int argc, const char* argv[])
     pthread_t* threadHandles = malloc(nThreads * sizeof(pthread_t));
     mandelbrotSet = malloc(nPoints * sizeof(double complex));
 
-    pthread_mutex_init(&mutex, NULL);
-
     for (size_t i = 0; i < nThreads; i++)
     {
         pthread_create(&threadHandles[i], NULL, routine, (void*)i);
@@ -67,8 +61,6 @@ int main(int argc, const char* argv[])
     {
         pthread_join(threadHandles[i], NULL);
     }
-
-    pthread_mutex_destroy(&mutex);
 
     saveMandelbrotSetToCSV("mandelbrot.csv");
 
