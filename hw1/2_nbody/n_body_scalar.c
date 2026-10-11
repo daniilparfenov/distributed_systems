@@ -1,5 +1,10 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#define G 6.67430e-11
+#define DT 0.01
 
 typedef struct
 {
@@ -15,6 +20,7 @@ typedef struct
 } point_t;
 
 int parseInput(const char* inputPath);
+int simulate();
 
 double tEnd = 0;
 size_t nPoints = 0;
@@ -32,8 +38,12 @@ int main(int argc, const char* argv[])
     printf("tEnd = %lf\n", tEnd);
     printf("inputPath = %s\n", inputPath);
 
+    int status = -1;
     if (parseInput(inputPath) != 0)
-        return EXIT_FAILURE;
+    {
+        fprintf(stderr, "[Error] parsing error");
+        goto main_cleanup;
+    }
 
     printf("nPoints = %zu\n", nPoints);
     for (size_t i = 0; i < nPoints; i++)
@@ -42,8 +52,18 @@ int main(int argc, const char* argv[])
                points[i].vel.y);
     }
 
+    if (simulate() != 0)
+    {
+        fprintf(stderr, "[Error] simulation error");
+        goto main_cleanup;
+    }
+    status = 0;
+
+main_cleanup:
     if (points)
         free(points);
+    if (status != 0)
+        return EXIT_FAILURE;
 
     return EXIT_SUCCESS;
 }
@@ -112,4 +132,69 @@ cleanup:
     }
 
     return status;
+}
+
+int simulate()
+{
+    vec2_t* forces = calloc(nPoints, sizeof(vec2_t));
+    if (!forces)
+    {
+        perror("[Error] couldn't allocate memory for forces buffer");
+        return -1;
+    }
+
+    for (double t = 0; t <= tEnd; t += DT)
+    {
+        memset(forces, 0, nPoints * sizeof(vec2_t));  // Reset forces to zero
+        for (size_t q = 0; q < nPoints; q++)
+        {
+            for (size_t k = q + 1; k < nPoints; k++)
+            {
+                double m_k = points[k].m;
+                double m_q = points[q].m;
+
+                double rx_k = points[k].pos.x;
+                double ry_k = points[k].pos.y;
+                double rx_q = points[q].pos.x;
+                double ry_q = points[q].pos.y;
+
+                double dx = rx_k - rx_q;
+                double dy = ry_k - ry_q;
+
+                double dist = dx * dx + dy * dy;  // dist^2
+                if (dist < 1e-10)                 // protection from division by zero
+                    continue;
+
+                double denom = dist * sqrt(dist);  // (dist^2) * dist = dist^3, faster than pow(dist^2, 1.5)
+                double forceScaler = G * m_q * m_k / denom;
+
+                forces[q].x += forceScaler * dx;
+                forces[q].y += forceScaler * dy;
+
+                // Newton's Third Law
+                forces[k].x -= forceScaler * dx;
+                forces[k].y -= forceScaler * dy;
+            }
+        }
+
+        // Find new position and velocity for points
+        for (size_t q = 0; q < nPoints; q++)
+        {
+            double m = points[q].m;
+            double x = points[q].pos.x;
+            double y = points[q].pos.y;
+            double v_x = points[q].vel.x;
+            double v_y = points[q].vel.y;
+            double F_x = forces[q].x;
+            double F_y = forces[q].y;
+
+            points[q].pos.x = x + v_x * DT;
+            points[q].pos.y = y + v_y * DT;
+            points[q].vel.x = v_x + (F_x / m) * DT;
+            points[q].vel.y = v_y + (F_y / m) * DT;
+        }
+    }
+    free(forces);
+
+    return 0;
 }
