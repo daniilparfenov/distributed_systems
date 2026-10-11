@@ -1,13 +1,22 @@
-CC=clang
-CFLAGS=-Wall -Wextra -lm -lpthread
+CC = clang
+CFLAGS = -Wall -Wextra -O3 -I../../include
+LDFLAGS = -lm -lpthread
 
-all: mandelbrot mandelbrot_scalar
+BUILD_DIR = ../../build
 
-mandelbrot: mandelbrot.c
-	$(CC) $(CFLAGS) mandelbrot.c -o mandelbrot.elf
+TARGETS = $(BUILD_DIR)/mandelbrot.elf $(BUILD_DIR)/mandelbrot_scalar.elf
 
-mandelbrot_scalar: mandelbrot_scalar.c
-	$(CC) $(CFLAGS) mandelbrot_scalar.c -o mandelbrot_scalar.elf
+all: $(TARGETS)
+
+# mandelbrot_parallel
+$(BUILD_DIR)/mandelbrot.elf: mandelbrot.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+# mandelbrot_scalar
+$(BUILD_DIR)/mandelbrot_scalar.elf: mandelbrot_scalar.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf *.o *.elf
+	rm -f $(BUILD_DIR)/mandelbrot.elf $(BUILD_DIR)/mandelbrot_scalar.elf
