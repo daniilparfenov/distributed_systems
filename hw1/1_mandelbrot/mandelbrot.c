@@ -48,7 +48,9 @@ int main(int argc, const char* argv[])
     }
 
     nThreads = strtoul(argv[1], NULL, 10);
+    nThreads = (nThreads == 0) ? 1 : nThreads;
     nPoints = strtoul(argv[2], NULL, 10);
+
     pthread_t* threadHandles = malloc(nThreads * sizeof(pthread_t));
     mandelbrotSet = malloc(nPoints * sizeof(double complex));
 
@@ -77,7 +79,10 @@ bool isMandelbrotPoint(const double complex point)
     for (size_t i = 0; i < MAX_N; i++)
     {
         z_n = z_n * z_n + c;
-        if (cabs(z_n) >= 2.0)
+
+        double re = creal(z_n);
+        double im = cimag(z_n);
+        if ((re * re + im * im) >= 4.0)  // instead of cabs(z_n) >= 2.0 because sqrt is expensive
             return false;
     }
     return true;
