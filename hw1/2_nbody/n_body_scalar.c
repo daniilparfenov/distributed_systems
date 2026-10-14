@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define G 6.67430e-11
-#define DT 0.01
+#define DT 0.01  // 200 for solar system
 
 typedef struct
 {
@@ -20,7 +20,7 @@ typedef struct
 } point_t;
 
 int parseInput(const char* inputPath);
-int simulate();
+int simulate(const char* outputPath);
 
 double tEnd = 0;
 size_t nPoints = 0;
@@ -52,7 +52,7 @@ int main(int argc, const char* argv[])
                points[i].vel.y);
     }
 
-    if (simulate() != 0)
+    if (simulate("nbody_output.txt") != 0)
     {
         fprintf(stderr, "[Error] simulation error");
         goto main_cleanup;
@@ -134,17 +134,34 @@ cleanup:
     return status;
 }
 
-int simulate()
+int simulate(const char* outputPath)
 {
+    int status = -1;
+
+    FILE* file = fopen(outputPath, "w");
+    if (file == NULL)
+    {
+        perror("[Error] couldn't open a file to write");
+        return -1;
+    }
+
     vec2_t* forces = calloc(nPoints, sizeof(vec2_t));
     if (!forces)
     {
         perror("[Error] couldn't allocate memory for forces buffer");
-        return -1;
+        goto simulate_cleanup;
     }
 
     for (double t = 0; t <= tEnd; t += DT)
     {
+        // Log current positions of points
+        fprintf(file, "%lf", t);
+        for (size_t i = 0; i < nPoints; i++)
+        {
+            fprintf(file, ",%lf,%lf", points[i].pos.x, points[i].pos.y);
+        }
+        fprintf(file, "\n");
+
         memset(forces, 0, nPoints * sizeof(vec2_t));  // Reset forces to zero
         for (size_t q = 0; q < nPoints; q++)
         {
@@ -194,7 +211,13 @@ int simulate()
             points[q].vel.y = v_y + (F_y / m) * DT;
         }
     }
-    free(forces);
+    status = 0;
 
-    return 0;
+simulate_cleanup:
+    if (forces)
+        free(forces);
+    if (file)
+        fclose(file);
+
+    return status;
 }
