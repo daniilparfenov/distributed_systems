@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 def main():
-    filename = 'output.csv'
+    filename = 'nbody_output.csv'
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 

@@ -52,7 +52,7 @@ int main(int argc, const char* argv[])
                points[i].vel.y);
     }
 
-    if (simulate("nbody_output.txt") != 0)
+    if (simulate("nbody_output.csv") != 0)
     {
         fprintf(stderr, "[Error] simulation error");
         goto main_cleanup;
