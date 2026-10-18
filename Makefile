@@ -1,6 +1,6 @@
 .PHONY: all mandelbrot clean
 
-all: mandelbrot
+all: mandelbrot n_body
 
 mandelbrot:
 	@echo "Building Mandelbrot..."
